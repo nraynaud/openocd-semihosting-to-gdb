@@ -727,15 +727,13 @@ int semihosting_common(struct target *target)
 								LOG_DEBUG("dup(STDIN)=%d",
 									(int)semihosting->result);
 							} else if (mode < 8) {
-								semihosting->result = dup(
-										STDOUT_FILENO);
-								semihosting->sys_errno = errno;
+								semihosting->result = STDOUT_FILENO;
+								semihosting->sys_errno = -1;
 								LOG_DEBUG("dup(STDOUT)=%d",
 									(int)semihosting->result);
 							} else {
-								semihosting->result = dup(
-										STDERR_FILENO);
-								semihosting->sys_errno = errno;
+                semihosting->result = STDERR_FILENO;
+                semihosting->sys_errno = -1;
 								LOG_DEBUG("dup(STDERR)=%d",
 									(int)semihosting->result);
 							}
@@ -1142,7 +1140,7 @@ int semihosting_common(struct target *target)
 					fileio_info->param_2 = addr;
 					fileio_info->param_3 = len;
 				} else {
-					uint8_t *buf = malloc(len);
+					uint8_t *buf = malloc(len + 1);
 					if (!buf) {
 						semihosting->result = -1;
 						semihosting->sys_errno = ENOMEM;
@@ -1152,8 +1150,13 @@ int semihosting_common(struct target *target)
 							free(buf);
 							return retval;
 						}
-						semihosting->result = write(fd, buf, len);
-						semihosting->sys_errno = errno;
+						if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
+							buf[len] = 0;
+							LOG_USER("%s", buf);
+						} else {
+							semihosting->result = write(fd, buf, len);
+							semihosting->sys_errno = errno;
+						}
 						LOG_DEBUG("write(%d, 0x%" PRIx64 ", %zu)=%d",
 							fd,
 							addr,
