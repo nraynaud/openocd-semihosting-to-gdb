@@ -1153,6 +1153,8 @@ int semihosting_common(struct target *target)
 						if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
 							buf[len] = 0;
 							LOG_USER("%s", buf);
+							semihosting->result = len;
+							semihosting->sys_errno = -1;
 						} else {
 							semihosting->result = write(fd, buf, len);
 							semihosting->sys_errno = errno;
